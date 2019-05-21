@@ -1,5 +1,5 @@
 ---
-title: "RR CP 2"
+title: "Severe Weather Events and Their Consequences in US (1950 - 2011)"
 author: "Yigit Ozan Berk"
 date: "5/20/2019"
 output: html_document
@@ -26,16 +26,52 @@ Initiation
 ```{r}
 library(ggplot2)
 library(dplyr)
+library(tidyr)
 ```
 
-Read the data file
+Read the data file, tidy dates
 
-```{r}
+```{r mainRead, cache = TRUE}
 wdata <- read.csv("repdata-data-StormData.csv.bz2")
+
+##isolating dates
+#BGN_DATE
+b_dates <- as.character(wdata$BGN_DATE)
+b <- strsplit(b_dates, " ")
+firstElement <- function(x) {x[1]}
+md <- sapply(b, firstElement)
+md <- as.Date(md, "%m/%d/%Y")
+#put back dates
+wdata$BGN_DATE <- md
+
+#END_DATE
+b_dates <- as.character(wdata$END_DATE)
+b <- strsplit(b_dates, " ")
+md <- sapply(b, firstElement)
+md <- as.Date(md, "%m/%d/%Y")
+#put back dates
+wdata$END_DATE <- md
+
+#cleaning cache
+rm(b_dates, b, df, md, mdat)
+
+```
+
+modify damage numbers into integers with exponent columns
+
+The 'CROPDMGEXP' is the exponent values for 'CROPDMG' (crop damage). In the same way, 'PROPDMGEXP' is the exponent values for 'PROPDMG' (property damage). You should use both to get the total values for crops and property damage. (B or b = Billion, M or m = Million, K or k = Thousand, H or h = Hundred). The number from one to ten represent the power of ten (10^The number). The symbols "-", "+" and "?" refers to less than, greater than and low certainty. You have the option to ignore these three symbols altogether. 
+
+```{r damages}
+
+
+
 ```
 
 -Fatality codes : REMARKS column. need to modify string.
--Fatality N : FATALITIES column
+-Fatality N : FATALITIES column 
+-Injuries : INJURIES colummn
+-Econ. Damage : PROPDMG , PROPDMGEXP
+-Econ. Damage : CROPDMG , CROPDMGEXP
 -Beginning Date : BGN_DATE %m/%d/%Y 0:00:00
 -Beginnign Time : BGN_TIME %
 -End Date : END_DATE
@@ -43,6 +79,26 @@ wdata <- read.csv("repdata-data-StormData.csv.bz2")
 -Time Zone : TIME_ZONE - 3 letter string
 -State : STATE__, STATE
 -Event Type : EVTYPE
+-Zone Names : ZONENAMES
+
+WFO = Weather Forecast Office, F = Fujita tornado intensity scale (F-Scale), MAG = Magnitude, or Strength, of the event. It is required by NOAA for Wind and Hail events if it is known. Wind Events are in KNOTS. Hail is in INCHES and TENTHS without the decimal (one and one-half are150).
+
+LENGTH = Path length of a tornado (in miles and tenths of miles). 
+WIDTH = Path width of a tornado, in yards. According to NOAA documentation the length and width used for all tornadoes, including each member of families of tornadoes, or for all segments of multi-segmented tornadoes.
+
+According to NOAA the data recording start from Jan. 1950. At that time they recorded one event type, tornado. They add more events gradually and only from Jan. 1996 they start recording all events type. Since our objective is comparing the effects of different weather events, do we need to include all years, even it has only single event type?
+*Graph and drop events before 1996*
+
+*EVTYPE COLUMN*
+The official events type are 48. However, if you use 'unique' function on 'EVTYPE' column you will get near one thousand events! All that is just typo. The regular expression ('regex', grepl, regexpr, gregexpr) and 'tolower', and 'toupper' functions can be a great help here. But cleaning up all that mess can take several days. However, reducing the size of data first will make a great difference here. Subset your data first, think of years, total value, frequency ... anything else that can be used to reduce the number of rows. Also, there are 37 variables, you do not need all of that for your analysis, remove as much as you can to make the analysis faster.
+
+Back to 'EVTYPE' column, one way to fix the typo is loading the official list of storm event types and manually mapping all (or most) list of unique recorded events with a typo. This way is the most painful one. Another way is using 'match' (from 'base' package) or even better you may use 'amatch' function from 'stringdist' package for Approximate String Matching. In that case, you will need to experiments with 'maxDist' option to get good accuracy.
+
+
+
 
 # Results  **Not more than 3 figures(each figure can have multiple plots)**
+Does the analysis address the question of which types of events are most harmful to population health?
+
+Does the analysis address the question of which types of events have the greatest economic consequences?
 
