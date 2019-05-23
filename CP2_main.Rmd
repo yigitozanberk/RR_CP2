@@ -27,6 +27,7 @@ Initiation
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+library(stringdist)
 ```
 
 Read the data file, tidy dates
@@ -53,19 +54,76 @@ md <- as.Date(md, "%m/%d/%Y")
 wdata$END_DATE <- md
 
 #cleaning cache
-rm(b_dates, b, df, md, mdat)
+rm(b_dates, b, md)
 
 ```
-
 modify damage numbers into integers with exponent columns
 
 The 'CROPDMGEXP' is the exponent values for 'CROPDMG' (crop damage). In the same way, 'PROPDMGEXP' is the exponent values for 'PROPDMG' (property damage). You should use both to get the total values for crops and property damage. (B or b = Billion, M or m = Million, K or k = Thousand, H or h = Hundred). The number from one to ten represent the power of ten (10^The number). The symbols "-", "+" and "?" refers to less than, greater than and low certainty. You have the option to ignore these three symbols altogether. 
 
+```{r}
+wdata$PROPDMGEXP <- as.character(wdata$PROPDMGEXP)
+wdata$propdamage <- NA
+for(i in 1:nrow(wdata)) {
+        if(wdata$PROPDMGEXP[i] %in% c("B", "b", "M", "m", "K", "H")) {
+                
+                if(wdata$PROPDMGEXP[i] == "B" | wdata$PROPDMGEXP[i] == "b"){
+                        wdata$propdamage[i] <- wdata$PROPDMG[i] * 1000000000
+                } else if(wdata$PROPDMGEXP[i] == "M" | wdata$PROPDMGEXP[i] == "m"){
+                        wdata$propdamage[i] <- wdata$PROPDMG[i] * 1000000
+                } else if(wdata$PROPDMGEXP[i] == "K" | wdata$PROPDMGEXP[i] == "k"){
+                        wdata$propdamage[i] <- wdata$PROPDMG[i] * 1000
+                } else if(wdata$PROPDMGEXP[i] == "H" | wdata$PROPDMGEXP[i] == "h"){
+                        wdata$propdamage[i] <- wdata$PROPDMG[i] * 100
+                }
+        }
+        else if(wdata$PROPDMGEXP[i] %in% c("0", "1", "2", "3", "4","5", "6", "7","8", "9")){
+                wdata$propdamage[i] <- wdata$PROPDMG[i] * 10^(wdata$PROPDMGEXP[i])
+        }else {
+                wdata$propdamage[i] <- NA
+                #mark the other variables for dropping later on.
+        }
+}
+```
+
+
+
 ```{r damages}
+str(unique(wdata$EVTYPE))
+```
+There should be 48 official events, by there are 985 different levels of EVTYPE 
+column. The typos must be corrected.
+
+```{r}
+wdata$EVTYPE <- toupper(wdata$EVTYPE)
+str(unique(wdata$EVTYPE))
+```
+
+Reduced a little but not much.
+
+Getting rid of unnecessary columns to lighten data.
+
+```{r}
+m_data <- select(wdata, STATE__, BGN_DATE, 
+                 EVTYPE, END_DATE, LENGTH, 
+                 FATALITIES, INJURIES, PROPDMG,
+                 PROPDMGEXP, CROPDMG, CROPDMGEXP)
+head(m_data)
+```
 
 
+
+```{r}
 
 ```
+
+Back to 'EVTYPE' column, one way to fix the typo is loading the official list of storm event types and manually mapping all (or most) list of unique recorded events with a typo. This way is the most painful one. Another way is using 'match' (from 'base' package) or even better you may use 'amatch' function from 'stringdist' package for Approximate String Matching. In that case, you will need to experiments with 'maxDist' option to get good accuracy.
+test line:
+amatch(c("EROSIN", "EROSION", "EROSAN", "EROSEN", "AVALENCHE", "AVALANCE"), c("EROSION", "AVALANCHE"), maxDist = 2)
+*EVTYPE COLUMN*
+The official events type are 48. However, if you use 'unique' function on 'EVTYPE' column you will get near one thousand events! All that is just typo. The regular expression ('regex', grepl, regexpr, gregexpr) and 'tolower', and 'toupper' functions can be a great help here. But cleaning up all that mess can take several days. However, reducing the size of data first will make a great difference here. Subset your data first, think of years, total value, frequency ... anything else that can be used to reduce the number of rows. Also, there are 37 variables, you do not need all of that for your analysis, remove as much as you can to make the analysis faster.
+
+
 
 -Fatality codes : REMARKS column. need to modify string.
 -Fatality N : FATALITIES column 
