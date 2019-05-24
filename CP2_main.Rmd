@@ -110,7 +110,8 @@ data <- wdata %>%
 
         )
 
-
+#cleanCache
+rm(wdata)
 ```
 
 ## Tidying the EVTYPE column
@@ -182,21 +183,29 @@ The difference between the original data and the processed data
 ```{r}
 nrow(processedData)/nrow(data)
 ```
-%0.99 difference in the number of observed cases
+%1.109 difference in the number of observed cases, proceeding.
 
 ```{r}
 p_sum <- sum(processedData$totaldamage)
 p_sum/i_sum
 ```
-%0.98 difference in the cost of total damage
+%1.18 difference in the cost of total damage, proceeding.
 
 ```{r}
 i_sum - p_sum
 ```
 
-The neglected damage in the processed data set is 8.756 billion dollars.
+Sidenote : The neglected damage in the processed data set(%1.18 compared to 
+observed total damage) is 8.756 billion dollars.
 
 
+
+
+
+
+
+According to NOAA the data recording start from Jan. 1950. At that time they recorded one event type, tornado. They add more events gradually and only from Jan. 1996 they start recording all events type. Since our objective is comparing the effects of different weather events, do we need to include all years, even it has only single event type?
+*Graph and drop events before 1996*
 
 
 -Fatality codes : REMARKS column. need to modify string.
@@ -217,16 +226,6 @@ WFO = Weather Forecast Office, F = Fujita tornado intensity scale (F-Scale), MAG
 
 LENGTH = Path length of a tornado (in miles and tenths of miles). 
 WIDTH = Path width of a tornado, in yards. According to NOAA documentation the length and width used for all tornadoes, including each member of families of tornadoes, or for all segments of multi-segmented tornadoes.
-
-According to NOAA the data recording start from Jan. 1950. At that time they recorded one event type, tornado. They add more events gradually and only from Jan. 1996 they start recording all events type. Since our objective is comparing the effects of different weather events, do we need to include all years, even it has only single event type?
-*Graph and drop events before 1996*
-
-*EVTYPE COLUMN*
-The official events type are 48. However, if you use 'unique' function on 'EVTYPE' column you will get near one thousand events! All that is just typo. The regular expression ('regex', grepl, regexpr, gregexpr) and 'tolower', and 'toupper' functions can be a great help here. But cleaning up all that mess can take several days. However, reducing the size of data first will make a great difference here. Subset your data first, think of years, total value, frequency ... anything else that can be used to reduce the number of rows. Also, there are 37 variables, you do not need all of that for your analysis, remove as much as you can to make the analysis faster.
-
-Back to 'EVTYPE' column, one way to fix the typo is loading the official list of storm event types and manually mapping all (or most) list of unique recorded events with a typo. This way is the most painful one. Another way is using 'match' (from 'base' package) or even better you may use 'amatch' function from 'stringdist' package for Approximate String Matching. In that case, you will need to experiments with 'maxDist' option to get good accuracy.
-
-
 
 
 # Results  **Not more than 3 figures(each figure can have multiple plots)**
