@@ -1,11 +1,11 @@
 ---
-title: "Severe Weather Events and Their Consequences in US (1950 - 2011)"
+title: "Severe Weather Events and Their Consequences in US (1996 - 2011)"
 author: "Yigit Ozan Berk"
 date: "5/20/2019"
 output: html_document
 ---
 
-Synopsis : This report tries to answer some basic questions about severe weather events in US between 1950 and 2011. 
+Synopsis : This report tries to answer some basic questions about severe weather events in US according to NOAA report. 
 
 1. Across the United States, which types of events (EVTYPE) are most harmful with respect to population health?
 
@@ -27,12 +27,12 @@ Initiation
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-library(stringdist)
 library(data.table)
 ```
 
-## Read the data file, tidy dates
+## Read the data file
 
+Read and tidy dates
 ```{r mainRead, cache = TRUE}
 wdata <- read.csv("repdata-data-StormData.csv.bz2")
 
@@ -58,9 +58,9 @@ wdata$END_DATE <- md
 rm(b_dates, b, md)
 
 ```
-## Modify damage numbers into integers with exponent columns
+## Tidying CROPDMG, and PROPDMG. Modify damage numbers into integers with exponent columns
 
-The 'CROPDMGEXP' is the exponent values for 'CROPDMG' (crop damage). In the same way, 'PROPDMGEXP' is the exponent values for 'PROPDMG' (property damage). You should use both to get the total values for crops and property damage. (B or b = Billion, M or m = Million, K or k = Thousand, H or h = Hundred). The number from one to ten represent the power of ten (10^The number). The symbols "-", "+" and "?" refers to less than, greater than and low certainty. You have the option to ignore these three symbols altogether.
+The 'CROPDMGEXP' is the exponent values for 'CROPDMG' (crop damage). In the same way, 'PROPDMGEXP' is the exponent values for 'PROPDMG' (property damage). You should use both to get the total values for crops and property damage. (B or b = Billion, M or m = Million, K or k = Thousand, H or h = Hundred). The number from one to ten represent the power of ten (10^The number). The symbols "-", "+" and "?" refers to less than, greater than and low certainty. 
 
 Check how many rows contain a numeric value in EXP columns
 ```{r}
@@ -69,7 +69,7 @@ nrow(wdata[grepl("[0-9]", wdata$PROPDMGEXP) | grepl("[0-9]",
 
 ```
 
-% 0.00035 is neglectible. 
+% 0.00035 is neglectible. Values with symbols "-", "+" and "?" are dropped along with characters [1-9].
 
 ```{r}
 
@@ -119,6 +119,7 @@ rm(wdata)
 ```{r damages}
 str(unique(data$EVTYPE))
 ```
+
 There should be 48 official events, but there are 985 different levels of EVTYPE 
 column. *The typos must be corrected.*
 
@@ -180,6 +181,7 @@ processedData$EVTYPE <- as.factor(as.character(processedData$EVTYPE))
 ```
 
 The difference between the original data and the processed data
+
 ```{r}
 nrow(processedData)/nrow(data)
 ```
@@ -195,41 +197,57 @@ p_sum/i_sum
 i_sum - p_sum
 ```
 
-Sidenote : The neglected damage in the processed data set(%1.18 compared to 
+Side note : The neglected damage in the processed data set(%1.18 compared to 
 observed total damage) is 8.756 billion dollars.
 
 
+## Further notes on EVTYPE
+
+Upon further examination of the EVTYPE column, there are some biases about the recorded
+event types. Before the date 1996-01-01, there are extreme differences on the % 
+of recorded event types
+```{r}
+myd <- filter(processedData, BNG_DATE < "1996-01-01")
+nrow(myd)/nrow(processedData)
+```
+While the number of observations before 1996 is around %28 of the number of observations until 2011,
+```{r}
+summary(myd$EVTYPE)/summary(processedData$EVTYPE)
+```
+the number of observations of some event types differ very drastically .
+
+According to [NOAA](https://www.ncdc.noaa.gov/stormevents/details.jsp?type=eventtype) the data recording start from Jan, 1950. However, at that time, they recorded one event type, tornado. They add Thunderstorm, Wind and Hail starting from Jan, 1955, but they only start adding all event types from Jan, 1996. 
+
+Therefore, for a more unbiased analysis all observations before Jan 1996 are dropped.
+
+```{r}
+tdata <- filter(processedData, BGN_DATE > "1996-01-01")
+# clean unused tables
+rm(data, myd, processedData, temp)
+head(tdata)
+```
 
 
 
+# Results **One figure for each question. An extra figure if need be**
+
+## Question : Across the United States, which types of events (EVTYPE) are most harmful with respect to population health?
+
+Firstly, let's look at the mean and sum values of fatalities and injuries for every event type.
+
+```{r}
+tdata%>% group_by(EVTYPE) %>% summarise(n = n(), 
+                                        meanFAT = mean(FATALITIES, na.rm = T),
+                                        sumFAT = sum(FATALITIES, na.rm = T),
+                                        meanINJ = mean(INJURIES, na.rm = T),
+                                        sumINJ = sum(INJURIES, na.rm = T)) %>%
+        arrange(desc(sumFAT, sumINJ))
+```
 
 
-According to NOAA the data recording start from Jan. 1950. At that time they recorded one event type, tornado. They add more events gradually and only from Jan. 1996 they start recording all events type. Since our objective is comparing the effects of different weather events, do we need to include all years, even it has only single event type?
-*Graph and drop events before 1996*
 
+## Question : Across the United States, which types of events have the greatest economic consequences?
 
--Fatality codes : REMARKS column. need to modify string.
--Fatality N : FATALITIES column 
--Injuries : INJURIES colummn
--Econ. Damage : PROPDMG , PROPDMGEXP
--Econ. Damage : CROPDMG , CROPDMGEXP
--Beginning Date : BGN_DATE %m/%d/%Y 0:00:00
--Beginnign Time : BGN_TIME %
--End Date : END_DATE
--End Time : END_TIME
--Time Zone : TIME_ZONE - 3 letter string
--State : STATE__, STATE
--Event Type : EVTYPE
--Zone Names : ZONENAMES
-
-WFO = Weather Forecast Office, F = Fujita tornado intensity scale (F-Scale), MAG = Magnitude, or Strength, of the event. It is required by NOAA for Wind and Hail events if it is known. Wind Events are in KNOTS. Hail is in INCHES and TENTHS without the decimal (one and one-half are150).
-
-LENGTH = Path length of a tornado (in miles and tenths of miles). 
-WIDTH = Path width of a tornado, in yards. According to NOAA documentation the length and width used for all tornadoes, including each member of families of tornadoes, or for all segments of multi-segmented tornadoes.
-
-
-# Results  **Not more than 3 figures(each figure can have multiple plots)**
-Does the analysis address the question of which types of events are most harmful to population health?
 
 Does the analysis address the question of which types of events have the greatest economic consequences?
 
