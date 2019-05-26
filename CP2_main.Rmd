@@ -235,15 +235,60 @@ head(tdata)
 
 Firstly, let's look at the mean and sum values of fatalities and injuries for every event type.
 
+Descending order of total fatalities. In the years between 1996-2011, heatwaves are the cause of most deaths in US, followed by tornados, and floods
 ```{r}
-tdata%>% group_by(EVTYPE) %>% summarise(n = n(), 
+sumdata <- tdata%>% group_by(EVTYPE) %>% summarise(n = n(), 
                                         meanFAT = mean(FATALITIES, na.rm = T),
                                         sumFAT = sum(FATALITIES, na.rm = T),
                                         meanINJ = mean(INJURIES, na.rm = T),
-                                        sumINJ = sum(INJURIES, na.rm = T)) %>%
-        arrange(desc(sumFAT, sumINJ))
+                                        sumINJ = sum(INJURIES, na.rm = T))
+arrange(sumdata, desc(sumFAT, sumINJ))
 ```
 
+Overall, around % 84.89 of weather event related deaths in the US between 1996 - 2011 are caused by the following events:
+1. heat waves - %23.84
+2. tornados - % 17.72
+3. floods - % 15.66
+4. thunderstorms - % 12.27
+5. surftides - % 8.16
+6. strong winds - % 7.34
+
+```{r}
+myd <- arrange(sumdata, desc(sumFAT, sumINJ))
+myd <- myd %>% mutate(FATpercentage = sumFAT/sum(sumFAT))
+myd
+```
+
+
+Descending order of total injuries. In the years between 1996-2011, tornados are the cause of most injuries in US, followed by thunderstorms, and floods.
+```{r}
+arrange(sumdata, desc(sumINJ, sumFAT))
+```
+
+Overall, around % 81.53 of weather event related deaths in the US between 1996 - 2011 are caused by the following events:
+1. tornados - % 36.5
+2. thunderstorms - % 16.4
+3. floods - % 15
+4. heat waves - % 13.6
+
+
+```{r}
+myi <- arrange(sumdata, desc(sumINJ, sumFAT))
+myi <- myi %>% mutate(INJpercentage = sumINJ/sum(sumINJ))
+myi
+```
+
+
+Descending order of average deaths; top event most deadly.
+```{r}
+arrange(sumdata, desc(meanFAT))
+```
+
+Descending order of average injuries.
+
+```{r}
+arrange(sumdata, desc(meanINJ))
+```
 
 
 ## Question : Across the United States, which types of events have the greatest economic consequences?
