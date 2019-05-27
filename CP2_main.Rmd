@@ -28,6 +28,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(data.table)
+library(gridExtra)
 ```
 
 ## Read the data file
@@ -207,7 +208,7 @@ Upon further examination of the EVTYPE column, there are some biases about the r
 event types. Before the date 1996-01-01, there are extreme differences on the % 
 of recorded event types
 ```{r}
-myd <- filter(processedData, BNG_DATE < "1996-01-01")
+myd <- filter(processedData, BGN_DATE < "1996-01-01")
 nrow(myd)/nrow(processedData)
 ```
 While the number of observations before 1996 is around %28 of the number of observations until 2011,
@@ -279,15 +280,63 @@ myi
 ```
 
 
-Descending order of average deaths; top event most deadly.
+
+
+
 ```{r}
-arrange(sumdata, desc(meanFAT))
+
+#the plot of injuries percentages vs fatalities percentages of each event type. 
+
+myt <- sumdata %>% mutate(INJpercentage = sumINJ/sum(sumINJ), 
+                          FATpercentage = sumFAT/sum(sumFAT))
+g1 <- ggplot(data = myt, mapping = aes(INJpercentage, FATpercentage, EVTYPE)) 
+g1 <- g1 + geom_point() 
+g1 <- g1 + geom_text(label=myt$EVTYPE, nudge_x = 0.01, nudge_y = 0.01, check_overlap = T)
+g1 <- g1 + ggtitle("Event Fatality", 
+                   subtitle = "Count in Event/Count in Total")
+g1 <- g1 + xlab("Number of Injuries of Event/Total Number of Injuries")
+g1 <- g1 + ylab("Number of Fatalities of Event/Total Number of Fatalities")
+
+# the plot of total fatalities per event type
+
+g2 <- ggplot(myt, aes(x = EVTYPE, y = sumFAT)) + geom_point() 
+g2 <- g2 + ggtitle(label = "Total Fatalities by Event Type") + xlab("Event Type")
+g2 <- g2 + ylab("Total Fatalities")
+
+#the plot of total injuries  per event type
+
+g3 <- ggplot(myt, aes(x = EVTYPE, y = sumINJ)) + geom_point()
+g3 <- g3 + ggtitle("Total Injuries by Event Type") + xlab("Event Type")
+g3 <- g3 + ylab("Total Injuries")
+
+
+#plot of the top 3 fatal events by year
+yeardata <- tdata %>% mutate(year = year(BGN_DATE)) %>% group_by(EVTYPE, year) %>%
+        summarise(n = n(),
+                                        meanFAT = mean(FATALITIES, na.rm = T),
+                                        sumFAT = sum(FATALITIES, na.rm = T),
+                                        meanINJ = mean(INJURIES, na.rm = T),
+                                        sumINJ = sum(INJURIES, na.rm = T))
+ 
+plotdataFAT <- yeardata %>% filter(EVTYPE == "flood"
+                                   | EVTYPE == "tornado" | EVTYPE == "heat")
+g4 <- ggplot(data = plotdataFAT, aes(x = year, y = sumFAT, EVTYPE)) + geom_line(aes(color = factor(EVTYPE)))
+g4 <- g4 + ggtitle("Yearly Change in Number of Deaths", 
+                   subtitle = "3 Events with Most Fatalities") + ylab("Number of Deaths")
+#plot of the top 4 injuring events by year
+plotdataINJ <- yeardata %>% filter(EVTYPE == "flood" 
+                                   | EVTYPE == "tornado"
+                                   | EVTYPE == "heat" | EVTYPE == "thunderstorm")
+g5 <- ggplot(data = plotdataINJ, aes(x = year, y = sumINJ, EVTYPE)) + geom_line(aes(color = factor(EVTYPE)))
+g5 <- g5 + ggtitle("Yearly Change in Number of Injuries", 
+                   subtitle = "4 Events with Most Injuries") + ylab("Number of Injuries")
+
+g1
 ```
 
-Descending order of average injuries.
-
+Looking closely to top 4 fatal event types:
 ```{r}
-arrange(sumdata, desc(meanINJ))
+grid.arrange(g2, g3, g4, g5)
 ```
 
 
